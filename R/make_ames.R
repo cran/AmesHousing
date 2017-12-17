@@ -11,7 +11,6 @@
 #' * Spaces and special characters in column names where changed
 #'  to snake case. To be consistent, `SalePrice` was changed to
 #'  `Sale_Price`.
-#' * One row was removed with an unexplained missing value. 
 #' * Many factor levels were changed to be more understandable
 #'  (e.g. `Split_or_Multilevel` instead of `080`)
 #' * Many missing values were reset. For example, if the variable
@@ -21,15 +20,19 @@
 #'  data pertaining to basements were set to zero where appropriate
 #'  such as variables `Bsmt_Full_Bath` and `Total_Bsmt_SF`.
 #' * `Garage_Yr_Blt` contained many missing data and was removed. 
-#' * Approximate longitude and latitude are included for 2,911
-#'  properties. By default, the processed data returns these
-#'  instances since their parcel IDs can be found in the Iowa
-#'  system. This eliminated one neighborhood, Green Hills, from the
-#'  processed data. Also, note that there are 7 properties with
+#' * Approximate longitude and latitude are included for the
+#'  properties. Also, note that there are 6 properties with
 #'  identical geotags. These are units within the same building. 
+#'  For some properties, updated versions of the PID identifiers
+#'  were found and are replaced with new values. 
 #' 
 #' `make_ordinal_ames` is the same as `make_ames` but many factor
-#'  variables were changed to class `ordered` (see below).
+#'   variables were changed to class `ordered` (see below).
+#'  
+#'  The documentation for [ames_raw()] contains descriptions of
+#'   the columns although, as noted above, the column names in 
+#'   [ames_raw()] are slightly different from the processed
+#'   versions. 
 #' @return A tibble with the data.
 #' @examples 
 #' ames <- make_ames()
@@ -137,7 +140,8 @@ make_ames <- function() {
       Bsmt_Unf_SF = ifelse(is.na(Bsmt_Unf_SF), 0, Bsmt_Unf_SF),
       Total_Bsmt_SF = ifelse(is.na(Total_Bsmt_SF), 0, Total_Bsmt_SF),
       Bsmt_Full_Bath = ifelse(is.na(Bsmt_Full_Bath), 0, Bsmt_Full_Bath),
-      Bsmt_Half_Bath = ifelse(is.na(Bsmt_Half_Bath), 0, Bsmt_Half_Bath)
+      Bsmt_Half_Bath = ifelse(is.na(Bsmt_Half_Bath), 0, Bsmt_Half_Bath),
+      Electrical = ifelse(is.na(Electrical), "Unknown", Electrical),
     ) %>%
     dplyr::mutate(Garage_Type =
                     dplyr::recode(Garage_Type,
@@ -405,8 +409,21 @@ make_ames <- function() {
       Overall_Qual = factor(Overall_Qual, levels = rev(ten_point)),
       Overall_Cond = factor(Overall_Cond, levels = rev(ten_point))
     ) %>%
-    # Electrical has a missing value with no real explanation
-    dplyr::filter(!is.na(Electrical)) %>%
+    # see issue #2, updated PIDs for some properties
+    mutate(
+      PID = ifelse(PID == "0904351040", "0904351045,", PID),
+      PID = ifelse(PID == "0535300120", "0535300125,", PID),
+      PID = ifelse(PID == "0902401130", "0902401135,", PID),
+      PID = ifelse(PID == "0906226090", "0906226090,", PID),
+      PID = ifelse(PID == "0908154040", "0908154045,", PID),
+      PID = ifelse(PID == "0909129100", "0909129105,", PID),
+      PID = ifelse(PID == "0914465040", "0914465043,", PID),
+      PID = ifelse(PID == "0902103150", "0902103145,", PID),
+      PID = ifelse(PID == "0902401120", "0902401125,", PID),
+      PID = ifelse(PID == "0916253320", "0916256880,", PID),
+      PID = ifelse(PID == "0916477060", "0916477065,", PID),
+      PID = ifelse(PID == "0916325040", "0916325045,", PID)
+    ) %>%
     dplyr::inner_join(AmesHousing::ames_geo, by = "PID") %>%
     # Garage_Yr_Blt is removed due to a fair amount of missing data
     dplyr::select(-Order,-PID, -Garage_Yr_Blt)
